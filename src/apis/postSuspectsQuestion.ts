@@ -25,7 +25,9 @@ export async function postSuspectsQuestion(
         );
 
         if (response.ok && response.body) {
+
             return response;
+
         }
     } catch (error) {
         console.log(error);
