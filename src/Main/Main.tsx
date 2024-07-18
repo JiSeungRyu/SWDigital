@@ -6,12 +6,12 @@ import { checkIsSolved } from "../checkIsSolved";
 // import { getSuspects } from "../apis/getSuspects";
 
 export default function Main() {
-    
     let navigate = useNavigate();
 
     //풀었는지 확인
     useEffect(() => {
-        checkIsSolved() ? navigate('/') : null;
+        checkIsSolved() ? navigate("/") : null;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

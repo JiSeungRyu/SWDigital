@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import SuspectInfor from "./component/SuspectInfor";
 import { useStore } from "zustand";
@@ -10,6 +10,8 @@ import { getUserChange } from "../../apis/getUserChange";
 
 export default function SuspectNumber() {
     const { suspectNumber } = useParams();
+    const navi = useNavigate();
+
     const stringToNumber = Number(suspectNumber);
     const { suspectArray } = useStore(storeSuspectInfor);
     // chatList scroll 될떄마다 스크롤 위치 바꾸기 위해서 ref를 갖고오고 변경되면 그떄에 따라 스크롤 위치 바꾸기
@@ -29,55 +31,65 @@ export default function SuspectNumber() {
             const question = inputValue;
             setInputValue("");
             const cnt = await getUserChange();
-            console.log(cnt);
-            setChatList((prevList) => [...prevList, question]);
-            const result = await postSuspectsQuestion(stringToNumber, question);
-            if (result !== undefined && result.body !== null) {
-                const reader = result.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let buffer = "";
-                let currentMessage = "";
 
-                setChatList((prevList) => [...prevList, ""]);
-                // eslint-disable-next-line no-constant-condition
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
+            if (cnt.isChanceLeft) {
+                setChatList((prevList) => [...prevList, question]);
+                const result = await postSuspectsQuestion(
+                    stringToNumber,
+                    question,
+                );
+                if (result !== undefined && result.body !== null) {
+                    const reader = result.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+                    let buffer = "";
+                    let currentMessage = "";
 
-                    const events = buffer.split("\n\n");
-                    buffer = events.pop() || "";
+                    setChatList((prevList) => [...prevList, ""]);
+                    // eslint-disable-next-line no-constant-condition
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
 
-                    events.forEach((eventString) => {
-                        if (eventString.startsWith("data:")) {
-                            try {
-                                const jsonString = eventString
-                                    .substring(5)
-                                    .trim();
-                                if (jsonString !== "[DONE]") {
-                                    const eventData = JSON.parse(jsonString);
+                        const events = buffer.split("\n\n");
+                        buffer = events.pop() || "";
 
-                                    if (
-                                        typeof eventData.choices[0].delta
-                                            .content === "string"
-                                    ) {
-                                        currentMessage +=
-                                            eventData.choices[0].delta.content;
+                        events.forEach((eventString) => {
+                            if (eventString.startsWith("data:")) {
+                                try {
+                                    const jsonString = eventString
+                                        .substring(5)
+                                        .trim();
+                                    if (jsonString !== "[DONE]") {
+                                        const eventData =
+                                            JSON.parse(jsonString);
 
-                                        setChatList((prevList) => {
-                                            const newList = [...prevList];
-                                            newList[newList.length - 1] =
-                                                currentMessage;
-                                            return newList;
-                                        });
+                                        if (
+                                            typeof eventData.choices[0].delta
+                                                .content === "string"
+                                        ) {
+                                            currentMessage +=
+                                                eventData.choices[0].delta
+                                                    .content;
+
+                                            setChatList((prevList) => {
+                                                const newList = [...prevList];
+                                                newList[newList.length - 1] =
+                                                    currentMessage;
+                                                return newList;
+                                            });
+                                        }
                                     }
+                                } catch (e) {
+                                    console.error("Failed to parse JSON:", e);
                                 }
-                            } catch (e) {
-                                console.error("Failed to parse JSON:", e);
                             }
-                        }
-                    });
+                        });
+                    }
                 }
+            } else {
+                alert("질문 횟수를 모두 소비하였습니다.");
+                navi("/main/deduction");
             }
         }
     };
@@ -144,7 +156,7 @@ export default function SuspectNumber() {
                     <input
                         type="text"
                         maxLength={120}
-                        placeholder="질문 기회는 총 5번이며 최대 120자 내로 질문할 수 있습니다."
+                        placeholder="질문 기회는 총 10번이며 최대 120자 내로 질문할 수 있습니다."
                         className="w-full h-full rounded-3xl bg-[#e3e3e3] pl-4 pr-16 outline-none"
                         value={inputValue}
                         onChange={(event) => setInputValue(event.target.value)}
