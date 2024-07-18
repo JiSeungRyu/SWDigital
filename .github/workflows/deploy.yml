@@ -1,32 +1,50 @@
-name: Deploy
+name: Deploy to GitHub Pages
 
 on:
     push:
         branches:
-            - main # 배포할 브랜치 설정
+            - main # 또는 배포를 트리거할 다른 브랜치
+
+permissions:
+    contents: write
+    pages: write
+    id-token: write
 
 jobs:
-    build-and-deploy:
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
         runs-on: ubuntu-latest
-
         steps:
-            - name: Checkout repository
-              uses: actions/checkout@v2
+            - name: Checkout
+              uses: actions/checkout@v3
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v2
+            - name: Set up Node
+              uses: actions/setup-node@v3
               with:
-                  node-version: "21"
+                  node-version: 14
+                  cache: npm
 
             - name: Install dependencies
               run: npm install
 
-            - name: Build project
-              run: npm run build # 빌드 스크립트 실행
+            - name: Build
+              run: npm run build
 
+            # 추가된 부분: Vite 개발 서버 실행 및 프록시 설정
+            - name: Start Vite development server with proxy
+              run: |
+                  npm install -g vite  # Vite CLI 전역 설치
+                  npm install --save-dev concurrently  # concurrently 패키지 설치
+                  concurrently "vite --mode development --port 3000" "sleep 5 && echo 'Vite development server started'" &
+
+            # 추가적인 작업 및 배포 단계 추가
+            - name: Additional deployment steps
+              run: |
+                  # 여기에 필요한 추가 배포 작업을 추가합니다.
+
+            # 필요에 따라 다른 배포 액션을 사용하여 GitHub Pages 등에 배포할 수 있습니다.
             - name: Deploy to GitHub Pages
-              uses: JamesIves/github-pages-deploy-action@3.7.1
-              with:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  BRANCH: gh-pages # 배포할 브랜치 설정
-                  FOLDER: dist # 빌드된 정적 파일 위치
+              id: deployment
+              uses: actions/deploy-pages@v1
