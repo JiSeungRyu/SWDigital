@@ -5,4 +5,13 @@ import react from "@vitejs/plugin-react-swc";
 export default defineConfig({
     base: "/SWDigital/",
     plugins: [react()],
+    server: {
+        proxy: {
+            "/api": {
+                target: "http://43.202.161.19:8080",
+                changeOrigin: true,
+                secure: false,
+            },
+        },
+    },
 });
